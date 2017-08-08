@@ -1,9 +1,9 @@
-module Data.DateTime.Parse (fromString, toString) where
+module Data.DateTime.Parse (fromString, fromUSAString, toString) where
 
 import Prelude
 import Data.Array (replicate)
 import Data.Date (day, month, year)
-import Data.Date.Parse (fromString) as ISO8601Date
+import Data.Date.Parse (fromString, fromUSAString) as ISO8601Date
 import Data.DateTime (DateTime(..), date, time)
 import Data.Either (Either(..))
 import Data.Enum (fromEnum, toEnum)
@@ -19,10 +19,20 @@ import Data.Time.Component (Hour, Millisecond, Minute, Second)
 fromString :: String -> Either String DateTime
 fromString s = do
   d <- ISO8601Date.fromString s
-  hour <- parseHour s
-  min <- parseMinute s
-  sec <- parseSecond s
-  msec <- parseMillisecond s
+  hour <- parseHour (take 2 (drop 11 s))
+  min <- parseMinute (take 2 (drop 14 s))
+  sec <- parseSecond (take 2 (drop 17 s))
+  msec <- parseMillisecond (take 3 (drop 20 s))
+  pure $ DateTime d (Time hour min sec msec)
+
+-- Parse a USA formatted date time string (example: "04-Jun-2017 13:04")
+fromUSAString :: String -> Either String DateTime
+fromUSAString s = do
+  d <- ISO8601Date.fromUSAString s
+  hour <- parseHour (take 2 (drop 12 s))
+  min <- parseMinute (take 2 (drop 15 s))
+  sec <- parseSecond "00"
+  msec <- parseMillisecond "000"
   pure $ DateTime d (Time hour min sec msec)
 
 -- Format a DateTime as a UTC ISO8016 date time combination string (example "2017-01-03:22:23:22Z").
@@ -45,28 +55,28 @@ toString dt =
 
 parseHour :: String -> Either String Hour
 parseHour s =
-  let n = Int.fromString (take 2 (drop 11 s))
+  let n = Int.fromString s
    in case n of
         Nothing -> Left "could not parse int for hour"
         Just i -> maybe (Left "invalid hour") Right (toEnum i)
 
 parseMinute :: String -> Either String Minute
 parseMinute s =
-  let n = Int.fromString (take 2 (drop 14 s))
+  let n = Int.fromString s
    in case n of
         Nothing -> Left "could not parse int for minute"
         Just i -> maybe (Left "invalid minute") Right (toEnum i)
 
 parseSecond :: String -> Either String Second
 parseSecond s =
-  let n = Int.fromString (take 2 (drop 17 s))
+  let n = Int.fromString s
    in case n of
         Nothing -> Left "could not parse int for seconds"
         Just i -> maybe (Left "invalid seconds") Right (toEnum i)
 
 parseMillisecond :: String -> Either String Millisecond
 parseMillisecond s =
-  let n = Int.fromString (take 3 (drop 20 s))
+  let n = Int.fromString s
    in case n of
         Nothing -> maybe (Left "expected milliseconds") Right (toEnum 0)
         Just i -> maybe (Left "invalid milliseconds") Right (toEnum i)
